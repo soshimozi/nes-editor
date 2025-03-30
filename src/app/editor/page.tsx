@@ -40,7 +40,8 @@ export default function Editor() {
     const [showSavedToast, setShowSavedToast] = useState(false);
     const [newProjectOpen, setNewProjectOpen] = useState(false);
     const [quads, setQuads] = useState<[number, number, number, number]>([0, 0, 0, 0]);
-
+    const [showPaletteSelector, setShowPaletteSelector] = useState(false);
+    
     const {
         pushState,
         undo,
@@ -238,10 +239,13 @@ export default function Editor() {
                             <div className="w-[416px]">
                                 <SpriteEditor quads={quads} chr={chr} palette={palette} onDrawPixel={onDrawPixel} />
                             </div>
-                            <div>
-                                <NESPaletteViewer />
+                            <div className="flex flex-row items-center gap-2">
+                                <PaletteView palette={palette} />
+                                <a href="#" onClick={() => setShowPaletteSelector(true)}>Change Palette</a>
                             </div>
-                            <div><PaletteView palette={palette} /></div>
+                            {showPaletteSelector && (
+                                    <PaletteSelector selectedPalette={palette} onSelectPalette={(p) => { setPalette(p); setShowPaletteSelector(false);}} />
+                            )}
                         </div>
 
                         <div className="flex flex-col gap-1">
@@ -269,9 +273,6 @@ export default function Editor() {
                                 palette={palette}
                             />
                         </div>    
-                </div>
-                <div>
-                    <PaletteSelector selectedPalette={palette} onSelectPalette={setPalette} />
                 </div>
             </Tab>
             <Tab label="Maps">
