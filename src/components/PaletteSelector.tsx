@@ -3,19 +3,21 @@ import { DropdownArrow } from "./DropDownArrow";
 
 
 type PaletteViewProps = {
+    selected?: number;
     palette: [string, string, string, string];
+    onClicked?: (index: number) => void;
 }
 
-export const PaletteView : React.FC<PaletteViewProps> = ({palette}) => {
+export const PaletteView : React.FC<PaletteViewProps> = ({selected, palette, onClicked}) => {
     
     return (
         <div className="flex flex-row gap-1">
             {palette.map((v, i) => (
                 <div 
-                    key={i} 
-                    style={{ backgroundColor: v }}
-                    className={`w-[48px] h-[48px] border border-zinc-300`}>
-                        &nbsp;
+                  onClick={() => onClicked?.(i)}
+                  key={i} 
+                  style={{ backgroundColor: v, border: i == selected ? '1px solid black' : 'none' }}
+                  className={`w-[48px] h-[48px] border border-zinc-300`}>
                 </div>
             ))}
         </div>
@@ -27,7 +29,7 @@ export type PaletteCollection = [string, string, string, string];
 interface PaletteSelectorProps {
     palettes: PaletteCollection[];
     selectedPalette: PaletteCollection;
-    onSelectPalette?: (palette: PaletteCollection) => void;
+    onSelectPalette?: (paletteIndex: number) => void;
 }
 
 export const PaletteSelector: React.FC<PaletteSelectorProps> = ({selectedPalette, onSelectPalette, palettes}) => {
@@ -49,7 +51,7 @@ export const PaletteSelector: React.FC<PaletteSelectorProps> = ({selectedPalette
                 <button
                   key={i}
                   onClick={() => {
-                    onSelectPalette?.(v);
+                    onSelectPalette?.(i);
                     setIsOpen(false);
                   }}
                   className="hover:bg-zinc-300 rounded p-2"

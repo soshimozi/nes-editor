@@ -42,6 +42,8 @@ export default function Editor() {
     const [newProjectOpen, setNewProjectOpen] = useState(false);
     const [quads, setQuads] = useState<[number, number, number, number]>([0, 0, 0, 0]);
     const [showPaletteSelector, setShowPaletteSelector] = useState(false);
+    const [selectedPalettedIndex, setSelectedPaletteIndex] = useState(0);
+    const [selectedColorIndex, setSelectedColorIndex] = useState(0);
     
     const {
         pushState,
@@ -55,17 +57,17 @@ export default function Editor() {
         setChr(updated);
       });
 
-    const [palettes, setPalettes] = useState<PaletteCollection[]>([
+    const [palettes, setPalettes] = useState<[PaletteCollection, PaletteCollection, PaletteCollection, PaletteCollection]>([
         ["#B6DBFF", "#6DB6FF", "#006DDB", "#002492"],
-        ["#DBB6FF", "#9292FF", "#0049FF", "#0000DB"],
-        ["#6D49DB", "#9200FF", "#DB6DFF", "#FFB6FF"],
-        ["#92006D", "#B600FF", "#FF00FF", "#FF92FF"],
+        ["#B6DBFF", "#9292FF", "#0049FF", "#0000DB"],
+        ["#B6DBFF", "#9200FF", "#DB6DFF", "#FFB6FF"],
+        ["#B6DBFF", "#B600FF", "#FF00FF", "#FF92FF"],
 
     ]);      
 
     const [nesPalette, setNESPalette] = useState<string[]>(NES_PALETTE);
           
-    const [palette, setPalette] = useState<[string, string, string, string]>(palettes[0]);    
+    //const [palette, setPalette] = useState<[string, string, string, string]>(palettes[0]);    
 
     const tile = chr[selectedTileIndex] ?? new Uint8Array(16);
 
@@ -86,7 +88,7 @@ export default function Editor() {
 
     const handleSaveJson = () => {
         try {
-            const asm = exportCa65PaletteAsm(palette);
+            const asm = exportCa65PaletteAsm(palettes[selectedTileIndex]);
             navigator.clipboard.writeText(asm);
             setShowSavedToast(true); // optional toast feedback
         } catch (err) {
@@ -109,7 +111,7 @@ export default function Editor() {
 
     const handleExportAsm = () => {
         try {
-        const asm = exportCa65PaletteAsm(palette);
+        const asm = exportCa65PaletteAsm(palettes[selectedPalettedIndex]);
         navigator.clipboard.writeText(asm);
         setShowSavedToast(true); // optional toast feedback
         } catch (err) {
@@ -118,7 +120,7 @@ export default function Editor() {
     }
 
     const handleSavePng = () => {
-        const canvas = exportCHRAsPNG(chr, palette, 4);
+        const canvas = exportCHRAsPNG(chr, palettes[selectedPalettedIndex], 4);
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
         link.download = 'tiles.png';
@@ -173,6 +175,30 @@ export default function Editor() {
         setNESPalette(p);
     }
 
+    const updatePalette = (pindex: number, cindex: number, color: string) => {
+        if(pindex != 0 && cindex == 0) return;
+
+        setPalettes(prev => {
+
+            // Step 1: Make a deep copy of the palettes
+            const updated = prev.map(row => [...row]) as [PaletteCollection, PaletteCollection, PaletteCollection, PaletteCollection];
+
+            // Step 2: Apply the drop
+            updated[pindex][cindex] = color;
+
+            // Step 3: Get the new first color from the first row
+            const firstColor = updated[0][0];
+
+            // Step 4: Copy that value into the first entry of all rows
+            for (let i = 0; i < updated.length; i++) {
+                updated[i][0] = firstColor;
+            }
+
+            return updated;            
+
+        });
+    }
+
     async function handleUpload(file?: File) {
         //const file = e.target.files?.[0];
         if (!file) return;
@@ -195,24 +221,24 @@ export default function Editor() {
     }
 
     async function handleGridDrop(file?: File) {
-        if (!file) return;
+        // if (!file) return;
 
-        const buffer = await file.arrayBuffer();
-        if (file.name.endsWith('.json')) {
-            const text = new TextDecoder().decode(buffer);
-            const { tiles, palette: loadedPalette } = parseChrJson(text);
-            setChr(tiles);
-            setPalette(loadedPalette);
-        } else {
-            const raw = new Uint8Array(buffer);
-            const tiles: Tile[] = [];
-            for (let i = 0; i < raw.length; i += 16) {
-                tiles.push(raw.slice(i, i + 16));
-            }
-            setChr(tiles);
-        }
+        // const buffer = await file.arrayBuffer();
+        // if (file.name.endsWith('.json')) {
+        //     const text = new TextDecoder().decode(buffer);
+        //     const { tiles, palette: loadedPalette } = parseChrJson(text);
+        //     setChr(tiles);
+        //     setPalette(loadedPalette);
+        // } else {
+        //     const raw = new Uint8Array(buffer);
+        //     const tiles: Tile[] = [];
+        //     for (let i = 0; i < raw.length; i += 16) {
+        //         tiles.push(raw.slice(i, i + 16));
+        //     }
+        //     setChr(tiles);
+        // }
 
-        setSelectedTileIndex(0);
+        // setSelectedTileIndex(0);
 
     }
 
@@ -225,7 +251,7 @@ export default function Editor() {
 
         pushState(); // 👈 Save state before modifying
 
-        setPixel(newTile, x, y, selectedColor);
+        setPixel(newTile, x, y, selectedColorIndex);
         
       
         // if (tool === 'draw') setPixel(newTile, x, y, selectedColor);
@@ -287,15 +313,15 @@ export default function Editor() {
 
                         <div className="flex flex-col gap-1">
                             <div className="w-[416px]">
-                                <SpriteEditor quads={quads} chr={chr} palette={palette} onDrawPixel={onDrawPixel} />
+                                <SpriteEditor quads={quads} chr={chr} palette={palettes[selectedPalettedIndex]} onDrawPixel={onDrawPixel} />
                             </div>
                             <div className="flex flex-row items-center gap-2">
-                                <PaletteView palette={palette} />
+                                <PaletteView palette={palettes[selectedPalettedIndex]}  onClicked={(index) => setSelectedColorIndex(index)} selected={selectedColorIndex} />
                                 <a href="#" onClick={() => setShowPaletteSelector(true)}>Select Palette</a>
                             </div>
                             {showPaletteSelector && (
                                     <div className="animation-fade-in">
-                                        <PaletteSelector palettes={palettes} selectedPalette={palette} onSelectPalette={(p) => { setPalette(p); setShowPaletteSelector(false);}} />
+                                        <PaletteSelector palettes={palettes} selectedPalette={palettes[selectedPalettedIndex]} onSelectPalette={(index) => { setSelectedPaletteIndex(index); setShowPaletteSelector(false);}} />
                                     </div>
                             )}
                         </div>
@@ -309,7 +335,7 @@ export default function Editor() {
                                         />                          
                             </div>
                             <div>
-                                <SpritePreview palette={palette} chr={chr} quads={quads} />
+                                <SpritePreview palette={palettes[selectedPalettedIndex]} chr={chr} quads={quads} />
                             </div>
                         </div>
                         <div
@@ -322,7 +348,7 @@ export default function Editor() {
                             <TileGrid
                                 tiles={chr}
                                 scale={6}
-                                palette={palette}
+                                palette={palettes[selectedPalettedIndex]}
                             />
                         </div>    
                 </div>
@@ -332,7 +358,7 @@ export default function Editor() {
             </Tab>
             <Tab label="Palette Builder">
                 <div>
-                    <NESPaletteViewer palette={nesPalette} />
+                    <NESPaletteViewer palette={nesPalette} palettes={palettes} onUpdate={updatePalette}/>
                 </div>
             </Tab>
         </Tabs>
