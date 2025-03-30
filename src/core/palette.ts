@@ -18,3 +18,6 @@ export const NES_PALETTE: string[] = [
     0x0F, 0x07, 0x17, 0x27,
     0x0F, 0x0A, 0x1A, 0x2A,
   ]; 
+
+
+  export type PaletteCollection = [string, string, string, string];

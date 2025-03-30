@@ -5,14 +5,14 @@ import { Tile, getPixel } from '@/core/chr';
 import { useRouter } from "next/router";
 import { PaletteEditor } from './PaletteEditor';
 
-type ColorSelectorProps = {
+type ColorSelectorDialogProps = {
     onSelectColor?: (color: number) => void;
     palette: [string, string, string, string]; // NES-style palette: 4 color hex strings
     selectedColor: number; // callback for drawing
     onPaletteChanged?: (palette: [string, string, string, string]) => void;
 };
 
-export const ColorSelector: React.FC<ColorSelectorProps> = ({
+export const ColorSelectorDialog: React.FC<ColorSelectorDialogProps> = ({
     selectedColor,
     onSelectColor,
     palette,
