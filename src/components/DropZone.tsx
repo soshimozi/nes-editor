@@ -33,7 +33,10 @@ const DropZone: React.FC<DropZoneProps> = ({onDrop, children, className}) => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={className}
-            style={{}}
+            style={{
+                border: isOver ? '2px dashed #fe0d0d' : 'none',
+                backgroundColor: isOver ? 'lightgreen' : 'transparent',
+            }}
         >
             {children}
         </div>
