@@ -1,3 +1,5 @@
+'use client';
+
 import { PaletteCollection } from "@/core/palette";
 
 

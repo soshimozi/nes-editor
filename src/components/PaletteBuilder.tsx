@@ -1,3 +1,5 @@
+'use client';
+
 import { NES_PALETTE, PaletteCollection } from "@/core/palette";
 import { useEffect, useRef, useState } from "react";
 import DraggableItem from "./DraggableItem";
