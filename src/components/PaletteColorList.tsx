@@ -1,3 +1,5 @@
+'use client';
+
 type PaletteColorListProps = {
     selected?: number;
     palette: [string, string, string, string];
