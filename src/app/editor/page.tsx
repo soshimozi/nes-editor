@@ -12,7 +12,7 @@ import { usePerTileUndo } from '@/core/usePertileUndo';
 import { MenuButton } from '@/components/MenuButton';
 import { Tool, ToolSelector } from '@/components/ToolSelector';
 import { TileQuadSelector } from '@/components/TileQuadSelector';
-import { Group } from 'lucide-react';
+import { Group, Palette } from 'lucide-react';
 import { SpritePreview } from '@/components/SpritePreview';
 import { SpriteEditor } from '@/components/SpriteEditor';
 import { PaletteBuilder } from '@/components/PaletteBuilder';
@@ -21,6 +21,7 @@ import { Tab } from '@/components/Tab';
 import { ColorDropdown } from '@/components/ColorDropdown';
 import { NES_PALETTE, PaletteCollection } from '@/core/palette';
 import { PaletteColorList } from '@/components/PaletteColorList';
+import { Tooltip } from 'react-tooltip'
 
 // type Tool = 'draw' | 'erase' | 'fill';
 
@@ -279,6 +280,7 @@ export default function Editor() {
 
     return (
         <>
+        <Tooltip id="my-tooltip" />        
         <ToastContainer limit={1} autoClose={3000} stacked={false} hideProgressBar={true} />
         <div className='ml-10'>
             <MenuButton
@@ -324,7 +326,11 @@ export default function Editor() {
                             </div>
                             <div className="flex flex-row items-center gap-2">
                                 <PaletteColorList palette={palettes[selectedPalettedIndex]}  onClicked={(index) => setSelectedColorIndex(index)} selected={selectedColorIndex} />
-                                <a href="#" onClick={() => setShowPaletteSelector(true)}>Select Palette</a>
+                                <div data-tooltip-id="my-tooltip" data-tooltip-content="Select a new palette" onClick={() => setShowPaletteSelector(true)} className='border border-zinc-900 rounded w-[48px] h-[48px] bg-purple-600 p-0 cursor-pointer hover:bg-purple-900'>
+
+                                    <Palette size={48} color="#ffffff" strokeWidth={1} />
+
+                                </div>
                             </div>
                             {showPaletteSelector && (
                                     <div ref={paletteContainerRef} className="animation-fade-in">
