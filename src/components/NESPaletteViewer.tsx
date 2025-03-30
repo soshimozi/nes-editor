@@ -1,8 +1,11 @@
 import { NES_PALETTE } from "@/core/palette";
 import { useEffect, useRef } from "react";
 
+interface NESPaletteViewerProps {
+    palette: string[]
+}
 
-export const NESPaletteViewer : React.FC = () => {
+export const NESPaletteViewer : React.FC<NESPaletteViewerProps> = ({palette}) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -23,7 +26,7 @@ export const NESPaletteViewer : React.FC = () => {
                 ctx.fillStyle = "#000000";
                 ctx.fillRect(0, 0, 768, 192);
 
-                NES_PALETTE.forEach((val, index) => {
+                palette.forEach((val, index) => {
                     // x is determined by index % 16
                     // y is determined by index / 16
     
@@ -41,7 +44,7 @@ export const NESPaletteViewer : React.FC = () => {
         });
 
         return () => cancelAnimationFrame(handle);
-    }, []); 
+    }, [palette]); 
 
 
     return (

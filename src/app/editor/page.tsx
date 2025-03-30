@@ -26,7 +26,8 @@ import { SpriteEditor } from '@/components/SpriteEditor';
 import { NESPaletteViewer } from '@/components/NESPaletteViewer';
 import { Tabs } from '@/components/Tabs';
 import { Tab } from '@/components/Tab';
-import { PaletteSelector, PaletteView } from '@/components/PaletteSelector';
+import { PaletteCollection, PaletteSelector, PaletteView } from '@/components/PaletteSelector';
+import { NES_PALETTE } from '@/core/palette';
 
 // type Tool = 'draw' | 'erase' | 'fill';
 
@@ -53,30 +54,35 @@ export default function Editor() {
         updated[index] = newTile;
         setChr(updated);
       });
+
+    const [palettes, setPalettes] = useState<PaletteCollection[]>([
+        ["#B6DBFF", "#6DB6FF", "#006DDB", "#002492"],
+        ["#DBB6FF", "#9292FF", "#0049FF", "#0000DB"],
+        ["#6D49DB", "#9200FF", "#DB6DFF", "#FFB6FF"],
+        ["#92006D", "#B600FF", "#FF00FF", "#FF92FF"],
+
+    ]);      
+
+    const [nesPalette, setNESPalette] = useState<string[]>(NES_PALETTE);
           
-    const [palette, setPalette] = useState<[string, string, string, string]>([
-        '#000000',
-        '#58D854',
-        '#A4E4FC',
-        '#FCFCFC',
-    ]);    
+    const [palette, setPalette] = useState<[string, string, string, string]>(palettes[0]);    
 
     const tile = chr[selectedTileIndex] ?? new Uint8Array(16);
 
-    const handleDrawPixel = (x: number, y: number) => {
-        const newTile = new Uint8Array(chr[selectedTileIndex]); // clone
-        pushState(); // 👈 Save state before modifying
+    // const handleDrawPixel = (x: number, y: number) => {
+    //     const newTile = new Uint8Array(chr[selectedTileIndex]); // clone
+    //     pushState(); // 👈 Save state before modifying
       
-        if (tool === 'draw') setPixel(newTile, x, y, selectedColor);
-        else if (tool === 'erase') setPixel(newTile, x, y, 0);
-        else if (tool === 'fill') floodFill(newTile, x, y, selectedColor);
+    //     if (tool === 'draw') setPixel(newTile, x, y, selectedColor);
+    //     else if (tool === 'erase') setPixel(newTile, x, y, 0);
+    //     else if (tool === 'fill') floodFill(newTile, x, y, selectedColor);
       
-        const updated = [...chr];
-        updated[selectedTileIndex] = newTile;
-        setChr(updated);
+    //     const updated = [...chr];
+    //     updated[selectedTileIndex] = newTile;
+    //     setChr(updated);
 
-        setShowAutosaveToast(true);        
-    };
+    //     setShowAutosaveToast(true);        
+    // };
 
     const handleSaveJson = () => {
         try {
@@ -120,25 +126,68 @@ export default function Editor() {
 
     }
 
+    const loadCHRFile = async (file: File) => {
+
+        const buffer = await file.arrayBuffer();
+
+        const raw = new Uint8Array(buffer);
+        const tiles: Tile[] = [];
+
+        for (let i = 0; i < raw.length; i += 16) {
+            tiles.push(raw.slice(i, i + 16));
+        }
+
+        setChr(tiles);
+
+    };
+
+    const rgbToHex = (r: number, g: number, b: number): string  => {
+        const toHex = (c: number): string => {
+          const hex = c.toString(16);
+          return hex.length === 1 ? "0" + hex : hex;
+        };
+      
+        return "#" + toHex(r) + toHex(g) + toHex(b);
+    }
+
+
+    const loadPalFile = async (file: File) => {
+        const buffer = await file.arrayBuffer();
+
+        const raw = new Uint8Array(buffer);
+        const colors: string[] = [];
+
+        const p: string[] = [];
+        for(let i = 0; i < raw.length; i += 3 ) {
+            const red = raw[i];
+            const green = raw[i + 1];
+            const blue = raw[i + 2];
+
+            
+            //const rgb = ((red << 16) & 0xff0000) | ((green << 8) & 0x00ff00) | (blue & 0x0000ff);
+            p.push(rgbToHex(red, green, blue));
+        }
+
+        //console.log(p);
+        //setPalettes[palettes]
+        setNESPalette(p);
+    }
+
     async function handleUpload(file?: File) {
         //const file = e.target.files?.[0];
         if (!file) return;
 
         const buffer = await file.arrayBuffer();
 
+
         if (file.name.endsWith('.json')) {
             const json = JSON.parse(new TextDecoder().decode(buffer));
             const loaded = json.map((arr: number[]) => new Uint8Array(arr));
             setChr(loaded);
-        } else {
-            const raw = new Uint8Array(buffer);
-            const tiles: Tile[] = [];
-
-            for (let i = 0; i < raw.length; i += 16) {
-                tiles.push(raw.slice(i, i + 16));
-            }
-
-            setChr(tiles);
+        } else if (file.name.endsWith('.pal')) {
+            await loadPalFile(file);
+        } else if (file.name.endsWith('.chr')) {
+            await loadCHRFile(file);
         }
 
         // Reset to tile 0 when loading
@@ -167,6 +216,7 @@ export default function Editor() {
 
     }
 
+    // TODO: move into component
     function onDrawPixel(x: number, y: number, quad: number): void {
         const tileIndex = quads[quad];
 
@@ -224,7 +274,7 @@ export default function Editor() {
         <input
             style={{ position: 'absolute', left: -99999}}
             type="file"
-            accept=".chr,.json"
+            accept=".chr,.json,.pal,.map"
             ref={fileInputRef}
             onChange={async (e) => { await handleUpload(e.target.files?.[0]) }}
             className="text-sm"
@@ -241,20 +291,22 @@ export default function Editor() {
                             </div>
                             <div className="flex flex-row items-center gap-2">
                                 <PaletteView palette={palette} />
-                                <a href="#" onClick={() => setShowPaletteSelector(true)}>Change Palette</a>
+                                <a href="#" onClick={() => setShowPaletteSelector(true)}>Select Palette</a>
                             </div>
                             {showPaletteSelector && (
-                                    <PaletteSelector selectedPalette={palette} onSelectPalette={(p) => { setPalette(p); setShowPaletteSelector(false);}} />
+                                    <div className="animation-fade-in">
+                                        <PaletteSelector palettes={palettes} selectedPalette={palette} onSelectPalette={(p) => { setPalette(p); setShowPaletteSelector(false);}} />
+                                    </div>
                             )}
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <div>
-                            <TileQuadSelector
-                                        value={quads}
-                                        onChange={setQuads}
-                                        tileCount={chr.length} // dynamically from your loaded tiles
-                                    />                          
+                                <TileQuadSelector
+                                            value={quads}
+                                            onChange={setQuads}
+                                            tileCount={chr.length} // dynamically from your loaded tiles
+                                        />                          
                             </div>
                             <div>
                                 <SpritePreview palette={palette} chr={chr} quads={quads} />
@@ -276,12 +328,12 @@ export default function Editor() {
                 </div>
             </Tab>
             <Tab label="Maps">
-                <div>
-                    
-                </div>
+                <div></div>
             </Tab>
             <Tab label="Palette Builder">
-                <div></div>
+                <div>
+                    <NESPaletteViewer palette={nesPalette} />
+                </div>
             </Tab>
         </Tabs>
         </div>
