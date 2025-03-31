@@ -21,8 +21,6 @@ export const SpritePreview: React.FC<ChrTileCanvasProps> = ({
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        console.log('rendering');
-
         const handle = requestAnimationFrame(() => {
             const ctx = canvas.getContext('2d');
             if (!ctx) return;

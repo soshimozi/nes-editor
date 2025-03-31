@@ -20,15 +20,12 @@ export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette,
         const x = Math.floor((e.clientX - rect.left) / scale);
         const y = Math.floor((e.clientY - rect.top) / scale);
 
-        console.log('mouse coords', `${e.clientX - rect.left}, ${e.clientY - rect.top}`)
         return { x, y };
     }
 
     const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if(!onDrawPixel) return;
         const coords = getMouseCoords(e);
-
-        console.log(coords)
 
         const x = coords.x % 8;
         const y = coords.y % 8;
@@ -44,9 +41,6 @@ export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette,
         } else {
             quad = 3;
         }
-
-        console.log('quad: ', quad);
-        console.log('(x, y)', `${x}, ${y}`)
 
         onDrawPixel?.(x, y, quad);
     }
