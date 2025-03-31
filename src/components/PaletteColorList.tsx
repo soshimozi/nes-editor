@@ -12,11 +12,6 @@ export const PaletteColorList : React.FC<PaletteColorListProps> = ({selected, pa
         <div className="flex flex-row gap-1">
             {palette.map((v, i) => {
 
-                console.log('selected: ', selected);
-                console.log(i);
-
-                console.log(i === selected);
-
                 const className = i === selected ? "w-[48px] h-[48px] hover:border-white border-2 border-red-500" : "w-[48px] h-[48px] hover:border-white border-2 border-zinc-400"
                 return (
                     <div 

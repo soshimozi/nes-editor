@@ -3,7 +3,9 @@
 import React, {useEffect, useRef, useState} from 'react';
 import { 
     createEmptyCHRSet, 
-    setPixel, 
+    getPixel, 
+    setPixel,
+    Tile, 
 } from '@/core/chr';
 
 import { Bounce, ToastContainer, toast } from 'react-toastify';
@@ -25,6 +27,14 @@ import { Tooltip } from 'react-tooltip'
 
 // type Tool = 'draw' | 'erase' | 'fill';
 
+type UndoRedoSetPixelState = {
+    tileIndex: number;
+    x: number;
+    y: number;
+    color: number;
+}
+
+
 export default function Editor() {
     const fileInputRef = useRef<HTMLInputElement>(null)
     const [chr, setChr] = useState(() => createEmptyCHRSet());
@@ -40,30 +50,9 @@ export default function Editor() {
     const [selectedColorIndex, setSelectedColorIndex] = useState(0);
     const [toastClosed, setToastClosed] = useState(true);
     const paletteContainerRef = useRef<HTMLDivElement>(null);
+    const [undoHistory, setUndoHistory] = useState<UndoRedoSetPixelState[]>([]);
+    const [redoHistory, setRedoHistory] = useState<UndoRedoSetPixelState[]>([]);
     
-    const perTileUndo = usePerTileUndo(selectedTileIndex, chr[selectedTileIndex], (index, newTile) => {
-        const updated = [...chr];
-        updated[index] = newTile;
-        setChr(updated);
-      });
-
-      const { pushState, undo, redo, canUndo, canRedo } = perTileUndo
-    
-      useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-          if (
-            paletteContainerRef.current &&
-            !paletteContainerRef.current.contains(event.target as Node)
-          ) {
-            setShowPaletteSelector(false);
-          }
-        };
-    
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-          document.removeEventListener('mousedown', handleClickOutside);
-        };
-      }, []);      
 
     const [palettes, setPalettes] = useState<[PaletteCollection, PaletteCollection, PaletteCollection, PaletteCollection]>([
         ["#B6DBFF", "#6DB6FF", "#006DDB", "#002492"],
@@ -203,10 +192,7 @@ export default function Editor() {
         });
     }
 
-    async function handleUpload(file?: File) {
-        //const file = e.target.files?.[0];
-        if (!file) return;
-
+    async function uploadFile(file: File) {
         const buffer = await file.arrayBuffer();
 
 
@@ -222,28 +208,65 @@ export default function Editor() {
 
         // Reset to tile 0 when loading
         setSelectedTileIndex(0);
+
+    }
+
+    async function handleUpload(file?: File) {
+        //const file = e.target.files?.[0];
+        if (!file) return;
+
+        uploadFile(file);
+
     }
 
     async function handleGridDrop(file?: File) {
-        // if (!file) return;
+        if (!file) return;
+        uploadFile(file);
+    }
 
-        // const buffer = await file.arrayBuffer();
-        // if (file.name.endsWith('.json')) {
-        //     const text = new TextDecoder().decode(buffer);
-        //     const { tiles, palette: loadedPalette } = parseChrJson(text);
-        //     setChr(tiles);
-        //     setPalette(loadedPalette);
-        // } else {
-        //     const raw = new Uint8Array(buffer);
-        //     const tiles: Tile[] = [];
-        //     for (let i = 0; i < raw.length; i += 16) {
-        //         tiles.push(raw.slice(i, i + 16));
-        //     }
-        //     setChr(tiles);
-        // }
+    function updateCHR(tile: Tile, index: number) {
+        const updated = [...chr]
+        updated[index] = tile;
+        setChr(updated);
 
-        // setSelectedTileIndex(0);
+    }
 
+    function redoState() {
+        if(redoHistory.length == 0) return;
+
+        const nextState = redoHistory[redoHistory.length - 1];
+
+        const prevState:UndoRedoSetPixelState = {...nextState, color: getPixel(chr[nextState.tileIndex], nextState.x, nextState.y)}
+
+        setRedoHistory(prev => prev.slice(0, -1));
+        setUndoHistory(prev => [...prev, prevState]);
+
+        const newTile = new Uint8Array(chr[nextState.tileIndex]);
+        setPixel(newTile, nextState.x, nextState.y, nextState.color);
+
+        updateCHR(newTile, nextState.tileIndex);
+    }
+
+    function undoState() {
+        if(undoHistory.length == 0) return;
+
+        const prevState = undoHistory[undoHistory.length - 1];
+
+        setUndoHistory(prev => prev.slice(0, -1));
+
+        const newState:UndoRedoSetPixelState = {...prevState, color: getPixel(chr[prevState.tileIndex], prevState.x, prevState.y)}
+
+        console.log('newState: ', newState);
+        setRedoHistory(prev => [...prev, newState]);
+
+        const newTile = new Uint8Array(chr[prevState.tileIndex]); // clone
+        setPixel(newTile, prevState.x, prevState.y, prevState.color);
+
+        updateCHR(newTile, prevState.tileIndex);
+
+        // const updated = [...chr]
+        // updated[prevState.tileIndex] = newTile;
+        // setChr(updated);
     }
 
     // TODO: move into component
@@ -253,10 +276,14 @@ export default function Editor() {
         console.log('tileIndex', tileIndex)
         const newTile = new Uint8Array(chr[tileIndex]); // clone
 
-        pushState(); // 👈 Save state before modifying
+        var state:UndoRedoSetPixelState =  { x: x, y: y, tileIndex: tileIndex, color: getPixel(chr[tileIndex], x, y)}
+        //undoHistory.push(state)
+
+        setUndoHistory(prev => [...prev, state]);
+        setRedoHistory(prev => prev.slice(0))
+        setRedoHistory([]);
 
         setPixel(newTile, x, y, selectedColorIndex);
-        
       
         // if (tool === 'draw') setPixel(newTile, x, y, selectedColor);
         // else if (tool === 'erase') setPixel(newTile, x, y, 0);
@@ -300,8 +327,8 @@ export default function Editor() {
             <MenuButton
             title="Edit"
             items={[
-                { label: 'Undo', onClick: undo, disabled: !canUndo },
-                { label: 'Redo', onClick: redo, disabled: !canRedo },
+                { label: 'Undo', onClick: undoState, disabled: undoHistory.length == 0 },
+                { label: 'Redo', onClick: redoState, disabled: redoHistory.length == 0 },
             ]}
             />
         </div>
