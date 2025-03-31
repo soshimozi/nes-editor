@@ -34,7 +34,7 @@ export const ToolSelector: React.FC<ToolSelectorProps> = ({ selectedTool, onSele
                 <button
                     key={i}
                     onClick={() => onSelect?.(def.tool as Tool) }
-                    className={`px-3 py-1 rounded text-sm font-mono capitalize transition
+                    className={`px-3 py-1 rounded text-sm font-mono capitalize transition border border-zinc-900 shadow-sm shadow-zinc-900/50 cursor-pointer
                         ${selectedTool === def.tool
                         ? 'bg-blue-600 text-white'
                         : 'bg-zinc-200 text-zinc-800 hover:bg-zinc-100'}

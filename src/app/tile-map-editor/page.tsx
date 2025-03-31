@@ -25,6 +25,8 @@ import { NES_PALETTE, PaletteCollection } from '@/core/palette';
 import { PaletteColorList } from '@/components/PaletteColorList';
 import { Tooltip } from 'react-tooltip'
 import { useHotkeys } from '@/core/useHotKeys';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
+import { DropdownArrow } from '@/components/DropDownArrow';
 
 // type Tool = 'draw' | 'erase' | 'fill';
 
@@ -67,28 +69,28 @@ export default function Editor() {
 
     const [nesPalette, setNESPalette] = useState<string[]>(NES_PALETTE);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-          if (
-            paletteContainerRef.current &&
-            !paletteContainerRef.current.contains(event.target as Node)
-          ) {
-            setShowPaletteSelector(false);
-          }
+    // useEffect(() => {
+    //     const handleClickOutside = (event: MouseEvent) => {
+    //     //   if (
+    //     //     paletteContainerRef.current &&
+    //     //     !paletteContainerRef.current.contains(event.target as Node)
+    //     //   ) {
+    //     //     setShowPaletteSelector(false);
+    //     //   }
 
-          if(
-            toolContainerRef.current &&
-            !toolContainerRef.current.contains(event.target as Node)
-          ) {
-            setShowToolSelector(false);
-          }
-        };
+    //       if(
+    //         toolContainerRef.current &&
+    //         !toolContainerRef.current.contains(event.target as Node)
+    //       ) {
+    //         setShowToolSelector(false);
+    //       }
+    //     };
     
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-          document.removeEventListener('mousedown', handleClickOutside);
-        };
-      }, []);      
+    //     document.addEventListener('mousedown', handleClickOutside);
+    //     return () => {
+    //       document.removeEventListener('mousedown', handleClickOutside);
+    //     };
+    //   }, []);      
                 
     
     useHotkeys('z', 'ctrl', () => {
@@ -430,26 +432,37 @@ export default function Editor() {
                             <div className="w-[418px]">
                                 <SpriteEditor quads={quads} chr={chr} palette={palettes[selectedPalettedIndex]} onDrawPixel={onDrawPixel} />
                             </div>
+                            <div className='p-2 bg-zinc-500 rounded'>
+                            <ToolSelector onSelect={(t) => { setTool(t); setShowToolSelector(false)}} selectedTool={tool} />
+                            </div>
                             <div className="flex flex-row items-start gap-2">
                                 <PaletteColorList palette={palettes[selectedPalettedIndex]}  onClicked={(index) => setSelectedColorIndex(index)} selected={selectedColorIndex} />
-                                <div className="flex flex-col gap-2">
+                                {/* <div className="flex flex-row gap-2">
                                     <button
                                             onClick={() => setShowPaletteSelector(!showPaletteSelector)} 
                                             className='border border-zinc-900 rounded w-[128px] h-[42px] bg-blue-400 p-0 cursor-pointer hover:bg-blue-200 active:bg-blue-600'>
-
-                                        {/* <Palette size={48} color="#ffffff" strokeWidth={1} /> */}
                                         Select Palette
 
+                                    </button>
+                                </div> */}
+                                <div className="flex flex-col justify-items-center">
+                                    <button onClick={() => setShowPaletteSelector(!showPaletteSelector)}   
+                                        className='w-[40px] h-[40px]
+                                        rounded text-sm font-mono capitalize transition border border-zinc-900 
+                                    shadow-sm shadow-zinc-900/50 bg-zinc-200 text-zinc-800 hover:bg-zinc-100 
+                                    active:bg-zinc-200
+                                    cursor-pointer'>
+                                        <DropdownArrow direction={showPaletteSelector ? "up" : "down"} />
                                     </button>
                                 </div>
 
                             </div>
-                            <ToolSelector onSelect={(t) => { setTool(t); setShowToolSelector(false)}} selectedTool={tool} />
                             {showPaletteSelector && (
                                     <div ref={paletteContainerRef} className="animation-fade-in">
                                         <ColorDropdown palettes={palettes} onSelectPalette={(index) => { setSelectedPaletteIndex(index); setShowPaletteSelector(false);}} />
                                     </div>
                             )}
+                            
                         </div>
 
                         <div className="flex flex-col gap-1">
@@ -463,16 +476,15 @@ export default function Editor() {
                             <div>
                                 <SpritePreview palette={palettes[selectedPalettedIndex]} chr={chr} quads={quads} />
                             </div>
-                            <div>
-                                <button className='mt-2 
-                                                    bg-blue-400 
-                                                    border-zinc-900 
-                                                    border rounded 
-                                                    p-2 
-                                                    cursor-pointer 
-                                                    hover:bg-blue-200
-                                                    active:bg-blue-600'>Save To Nametable</button>
-
+                            <div className="flex flex-col justify-items-center">
+                            <button
+                                className={`px-3 py-1 rounded text-sm font-mono capitalize transition border border-zinc-900 
+                                    shadow-sm shadow-zinc-900/50 bg-zinc-200 text-zinc-800 hover:bg-zinc-100 
+                                    active:bg-zinc-200
+                                    cursor-pointer`}
+                            >
+                                Save To Nametable
+                            </button>
                             </div>
                         </div>
                         <div
@@ -491,7 +503,9 @@ export default function Editor() {
                 </div>
             </Tab>
             <Tab label="Maps">
-                <div></div>
+                <div>
+                    <MarkdownRenderer content={"# Test markdown"} />
+                </div>
             </Tab>
             <Tab label="Palette Builder">
                 <div>

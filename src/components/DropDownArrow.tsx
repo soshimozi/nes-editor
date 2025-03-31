@@ -19,7 +19,7 @@ export const DropdownArrow: React.FC<DropdownArrowProps> = ({
 
   return (
     <svg
-      className={`ml-2 w-${size} h-${size} ${rotation} ${className}`}
+      className={`w-${size} h-${size} ${rotation} ${className}`}
       viewBox="0 0 20 20"
       fill="currentColor"
     >
