@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Tile, getPixel } from '@/core/chr';
+import { Tile, getTilePixel } from '@/core/chr';
 import { useRouter } from "next/router";
 import { PaletteEditor } from './PaletteEditor';
 
