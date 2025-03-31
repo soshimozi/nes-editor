@@ -11,6 +11,7 @@ type SpriteEditorProps = {
 
 export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette, onDrawPixel }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [isDrawing, setIsDrawing] = useState(false);
 
     const size = 416;
     const scale = 26;
@@ -23,8 +24,11 @@ export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette,
         return { x, y };
     }
 
-    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-        if(!onDrawPixel) return;
+    const handleMouseUp = () => {
+        setIsDrawing(false);
+    };
+
+    const drawPixelUnderMouse = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const coords = getMouseCoords(e);
 
         const x = coords.x % 8;
@@ -43,6 +47,19 @@ export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette,
         }
 
         onDrawPixel?.(x, y, quad);
+    }
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        if(!onDrawPixel) return;
+        setIsDrawing(true);
+
+        drawPixelUnderMouse(e);
+    }
+
+    const handleMouseMove = (e:React.MouseEvent<HTMLCanvasElement>) => {
+
+        if(!isDrawing || !onDrawPixel) return;
+        drawPixelUnderMouse(e);
     }
 
 
@@ -102,6 +119,8 @@ export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette,
             width={size} 
             ref={canvasRef}                 
             onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
             />
     </div>
     )
