@@ -16,7 +16,7 @@ import { Tool, ToolSelector } from '@/components/ToolSelector';
 import { TileQuadSelector } from '@/components/TileQuadSelector';
 import { Group, Palette } from 'lucide-react';
 import { SpritePreview } from '@/components/SpritePreview';
-import { SpriteEditor } from '@/components/SpriteEditor';
+import { TileEditor } from '@/components/TileEditor';
 import { PaletteBuilder } from '@/components/PaletteBuilder';
 import { Tabs } from '@/components/Tabs';
 import { Tab } from '@/components/Tab';
@@ -69,30 +69,6 @@ export default function Editor() {
 
     const [nesPalette, setNESPalette] = useState<string[]>(NES_PALETTE);
 
-    // useEffect(() => {
-    //     const handleClickOutside = (event: MouseEvent) => {
-    //     //   if (
-    //     //     paletteContainerRef.current &&
-    //     //     !paletteContainerRef.current.contains(event.target as Node)
-    //     //   ) {
-    //     //     setShowPaletteSelector(false);
-    //     //   }
-
-    //       if(
-    //         toolContainerRef.current &&
-    //         !toolContainerRef.current.contains(event.target as Node)
-    //       ) {
-    //         setShowToolSelector(false);
-    //       }
-    //     };
-    
-    //     document.addEventListener('mousedown', handleClickOutside);
-    //     return () => {
-    //       document.removeEventListener('mousedown', handleClickOutside);
-    //     };
-    //   }, []);      
-                
-    
     useHotkeys('z', 'ctrl', () => {
         undoState();
     });
@@ -348,26 +324,32 @@ export default function Editor() {
         }
     }
 
-    // TODO: move into component
-    function onDrawPixel(x: number, y: number, quad: number): void {
-        const tileIndex = quads[quad];
-        const newTile = new Uint8Array(chr[tileIndex]); // clone
+    const [selectedTileIndex, setSelectedTileIndex] = useState<number>(0);
 
-        var state:UndoRedoState =  { x: x, y: y, tileIndex: tileIndex, color: getTilePixel(chr[tileIndex], x, y)}
+    // TODO: move into component
+    function onDrawPixel(x: number, y: number): void {
+
+        var state:UndoRedoState =  { x: x, y: y, tileIndex: selectedTileIndex, color: getTilePixel(chr[selectedTileIndex], x, y)}
       
+        const newTile = new Uint8Array(chr[selectedTileIndex])
+
         if (tool === 'draw')  {
             pushHistory(state);
             setTilePixel(newTile, x, y, selectedColorIndex);
+            updateCHR(newTile, selectedTileIndex)
         }
         else if (tool === 'erase') {
             pushHistory(state);
             setTilePixel(newTile, x, y, 0);
         }
-        else if (tool === 'fill') floodFill(newTile, tileIndex, x, y, selectedColorIndex);
+        else if (tool === 'fill') floodFill(newTile, selectedTileIndex, x, y, selectedColorIndex);
+
+        updateCHR(newTile, selectedTileIndex);
       
-        const updated = [...chr];
-        updated[tileIndex] = newTile;
-        setChr(updated);
+        //updateCHR(newTile, selectedTileIndex);
+        // const updated = [...chr];
+        // updated[selectedTileIndex] = newTile;
+        // setChr(updated);
 
         Notify("Auto saved");
     }
@@ -429,22 +411,14 @@ export default function Editor() {
                 <div className="flex items-start flex-row bg-zinc-300 p-2 gap-2">
 
                         <div className="flex flex-col gap-1">
-                            <div className="w-[418px]">
-                                <SpriteEditor quads={quads} chr={chr} palette={palettes[selectedPalettedIndex]} onDrawPixel={onDrawPixel} />
+                            <div className="w-full">
+                                <TileEditor onDropTile={(id) => setSelectedTileIndex(parseInt(id))} selectedTileIndex={selectedTileIndex} chr={chr} palette={palettes[selectedPalettedIndex]} onDrawPixel={onDrawPixel} />
                             </div>
                             <div className='p-2 bg-zinc-500 rounded'>
                             <ToolSelector onSelect={(t) => { setTool(t); setShowToolSelector(false)}} selectedTool={tool} />
                             </div>
                             <div className="flex flex-row items-start gap-2">
                                 <PaletteColorList palette={palettes[selectedPalettedIndex]}  onClicked={(index) => setSelectedColorIndex(index)} selected={selectedColorIndex} />
-                                {/* <div className="flex flex-row gap-2">
-                                    <button
-                                            onClick={() => setShowPaletteSelector(!showPaletteSelector)} 
-                                            className='border border-zinc-900 rounded w-[128px] h-[42px] bg-blue-400 p-0 cursor-pointer hover:bg-blue-200 active:bg-blue-600'>
-                                        Select Palette
-
-                                    </button>
-                                </div> */}
                                 <div className="flex flex-col justify-items-center">
                                     <button onClick={() => setShowPaletteSelector(!showPaletteSelector)}   
                                         className='w-[40px] h-[40px]
@@ -465,7 +439,7 @@ export default function Editor() {
                             
                         </div>
 
-                        <div className="flex flex-col gap-1">
+                        {/* <div className="flex flex-col gap-1">
                             <div>
                                 <TileQuadSelector
                                             value={quads}
@@ -486,15 +460,17 @@ export default function Editor() {
                                 Save To Nametable
                             </button>
                             </div>
-                        </div>
+                        </div> */}
                         <div
-                            className="h-[512px] overflow-y-scroll bg-white border-black border w-[450px]"
+                            className="h-[512px] overflow-y-scroll bg-white border-black border w-fill"
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={async (e) => {
                                 e.preventDefault();
                                 handleGridDrop(e.dataTransfer.files?.[0])
                             }}>
                             <TileGrid
+                                onSelect={setSelectedTileIndex}
+                                selectedIndex={selectedTileIndex}
                                 tiles={chr}
                                 scale={6}
                                 palette={palettes[selectedPalettedIndex]}

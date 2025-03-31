@@ -8,8 +8,7 @@ type ChrTileCanvasProps = {
     scale?: number;
     palette?: [string, string, string, string]; // NES-style palette: 4 color hex strings
     onDrawPixel?: (x: number, y: number) => void; // callback for drawing
-    isSelected?: boolean;
-    isSelectable?: boolean;
+    isSelected: boolean;
 };
 
 export const ChrTileCanvas: React.FC<ChrTileCanvasProps> = ({
@@ -17,8 +16,7 @@ export const ChrTileCanvas: React.FC<ChrTileCanvasProps> = ({
     scale = 16,
     palette = ['#000000', '#555555', '#AAAAAA', '#FFFFFF'],
     onDrawPixel,
-    isSelected = false,
-    isSelectable = true
+    isSelected
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -73,13 +71,13 @@ export const ChrTileCanvas: React.FC<ChrTileCanvasProps> = ({
         setIsDrawing(false);
     }
 
+    const borderClass = isSelected  ? "border-blue-700 border-2" : "border-zinc-500 border";
     return (
         <canvas
             ref={canvasRef}
             width={size}
             height={size}
-            className={`block border-2 transition-all duration-75
-                'border-zinc-500'`
+            className={`block transition-all duration-75 ${borderClass}`
                 }            
                 style={{ imageRendering: 'pixelated',
             }}
