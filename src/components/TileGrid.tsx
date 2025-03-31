@@ -8,16 +8,16 @@ import DraggableItem from './DraggableItem';
 
 type TileGridProps = {
     tiles: Tile[];
-    // selectedIndex: number;
-    // onSelect?: (index: number) => void;
+    selectedIndex: number;
+    onSelect?: (index: number) => void;
     scale?: number;
     palette: [string, string, string, string]; // 👈 Add this
 };
 
 export const TileGrid: React.FC<TileGridProps> = ({
     tiles,
-    // selectedIndex,
-    // onSelect,
+    selectedIndex,
+    onSelect,
     scale = 2,
     palette
 }) => {
@@ -29,7 +29,7 @@ export const TileGrid: React.FC<TileGridProps> = ({
             <div
                 className="grid gap-2"
                 style={{
-                    gridTemplateColumns: `repeat(4, ${cellSize * scale * 2}px`,
+                    gridTemplateColumns: `repeat(8, ${cellSize * scale * 2}px`,
                 }}
                 >
                     {tiles.map((tile, index) => (
@@ -39,13 +39,14 @@ export const TileGrid: React.FC<TileGridProps> = ({
                         </span>
                         <div className="justify-items-end w-full">
                             <DraggableItem id={index.toString().padStart(3, '0')}>
-                            <ChrTileCanvas
-                                tile={tile}
-                                // isSelected={index === selectedIndex}
-                                isSelectable={false}
-                                scale={scale}
-                                palette={palette}
-                            />
+                                <button onClick={() => onSelect?.(index)}>
+                                    <ChrTileCanvas
+                                        tile={tile}
+                                        isSelected={index === selectedIndex}
+                                        scale={scale}
+                                        palette={palette}
+                                    />
+                                </button>
                             </DraggableItem>
                         </div>
                     </div>                        
