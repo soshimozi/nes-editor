@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { CHRData, getPixel } from '@/core/chr';
+import { CHRData, getTilePixel } from '@/core/chr';
 
 type SpriteEditorProps = {
   quads: [number, number, number, number];
@@ -70,7 +70,7 @@ export const SpriteEditor: React.FC<SpriteEditorProps> = ({ quads, chr, palette,
     
                     for (let y = 0; y < 8; y++) {
                         for (let x = 0; x < 8; x++) {
-                            const colorIndex = getPixel(tile, x, y) & 0b11;
+                            const colorIndex = getTilePixel(tile, x, y) & 0b11;
                             ctx.fillStyle = palette[colorIndex] ?? '#000000';
                             ctx.fillRect((x + xOffset) * scale, (y + yOffset) * scale, scale, scale);
                         }

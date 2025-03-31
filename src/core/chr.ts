@@ -18,7 +18,7 @@ export function createEmptyCHRSet(tileCount: number = 256): CHRData {
  * @param y - Row (0-7)
  * @returns color index (0-3)
  */
-export function getPixel(tile: Tile, x: number, y: number): number {
+export function getTilePixel(tile: Tile, x: number, y: number): number {
     const plane0 = (tile[y] >> (7 - x))  & 1;
     const plane1 = (tile[y + 8] >> (7 - x)) & 1;
     return (plane1 << 1) | plane0;
@@ -31,7 +31,7 @@ export function getPixel(tile: Tile, x: number, y: number): number {
  * @param y - Row (0-7)
  * @param color - Color index (0-3)
 */
-export function setPixel(tile: Tile, x: number, y: number, color: number): void {
+export function setTilePixel(tile: Tile, x: number, y: number, color: number): void {
   const bit0 = color & 1;
   const bit1 = (color >> 1) & 1;
 
@@ -43,32 +43,32 @@ export function setPixel(tile: Tile, x: number, y: number, color: number): void 
   tile[y + 8] = (tile[y + 8] & mask) | (bit1 << (7 - x));
 }
 
-export function floodFill(tile: Tile, x: number, y: number, newColor: number): void {
-  const targetColor = getPixel(tile, x, y);
-  if (targetColor === newColor) return;
+// export function floodFillTile(tile: Tile, x: number, y: number, newColor: number): void {
+//   const targetColor = getTilePixel(tile, x, y);
+//   if (targetColor === newColor) return;
 
-  const stack: [number, number][] = [[x, y]];
-  const visited = new Set<string>();
+//   const stack: [number, number][] = [[x, y]];
+//   const visited = new Set<string>();
 
-  const key = (x: number, y: number) => `${x},${y}`;
+//   const key = (x: number, y: number) => `${x},${y}`;
 
-  while (stack.length > 0) {
-    const [cx, cy] = stack.pop()!;
-    if (cx < 0 || cx > 7 || cy < 0 || cy > 7) continue;
-    if (visited.has(key(cx, cy))) continue;
+//   while (stack.length > 0) {
+//     const [cx, cy] = stack.pop()!;
+//     if (cx < 0 || cx > 7 || cy < 0 || cy > 7) continue;
+//     if (visited.has(key(cx, cy))) continue;
 
-    const currentColor = getPixel(tile, cx, cy);
-    if (currentColor !== targetColor) continue;
+//     const currentColor = getTilePixel(tile, cx, cy);
+//     if (currentColor !== targetColor) continue;
 
-    setPixel(tile, cx, cy, newColor);
-    visited.add(key(cx, cy));
+//     setTilePixel(tile, cx, cy, newColor);
+//     visited.add(key(cx, cy));
 
-    stack.push([cx + 1, cy]);
-    stack.push([cx - 1, cy]);
-    stack.push([cx, cy + 1]);
-    stack.push([cx, cy - 1]);
-  }
-}
+//     stack.push([cx + 1, cy]);
+//     stack.push([cx - 1, cy]);
+//     stack.push([cx, cy + 1]);
+//     stack.push([cx, cy - 1]);
+//   }
+// }
 
 
 export function exportCHRAsPNG(chr: Tile[], palette: string[], tileScale = 8): HTMLCanvasElement {
@@ -87,7 +87,7 @@ export function exportCHRAsPNG(chr: Tile[], palette: string[], tileScale = 8): H
   
       for (let y = 0; y < 8; y++) {
         for (let x = 0; x < 8; x++) {
-          const colorIndex = getPixel(tile, x, y) & 0b11;
+          const colorIndex = getTilePixel(tile, x, y) & 0b11;
           ctx.fillStyle = palette[colorIndex] ?? '#000000';
           ctx.fillRect(
             (col * 8 + x) * tileScale,

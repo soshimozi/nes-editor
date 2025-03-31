@@ -3,8 +3,8 @@
 import React, {useEffect, useRef, useState} from 'react';
 import { 
     createEmptyCHRSet, 
-    getPixel, 
-    setPixel,
+    getTilePixel, 
+    setTilePixel,
     Tile, 
 } from '@/core/chr';
 
@@ -27,32 +27,34 @@ import { Tooltip } from 'react-tooltip'
 
 // type Tool = 'draw' | 'erase' | 'fill';
 
-type UndoRedoSetPixelState = {
+type SetPixelState = {
     tileIndex: number;
     x: number;
     y: number;
     color: number;
 }
 
+type FloodFillState = SetPixelState[];
+
+type UndoRedoState = SetPixelState | FloodFillState;
+
+
 
 export default function Editor() {
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const paletteContainerRef = useRef<HTMLDivElement>(null);
+    const toolContainerRef = useRef<HTMLDivElement>(null);
+
     const [chr, setChr] = useState(() => createEmptyCHRSet());
-    const [selectedTileIndex, setSelectedTileIndex] = useState(0);
-    const [selectedColor, setSelectedColor] = useState(1);
     const [tool, setTool] = useState<Tool>('draw');
-    // const [showAutosaveToast, setShowAutosaveToast] = useState(false);
-    // const [showSavedToast, setShowSavedToast] = useState(false);
-    const [newProjectOpen, setNewProjectOpen] = useState(false);
     const [quads, setQuads] = useState<[number, number, number, number]>([0, 0, 0, 0]);
     const [showPaletteSelector, setShowPaletteSelector] = useState(false);
     const [selectedPalettedIndex, setSelectedPaletteIndex] = useState(0);
     const [selectedColorIndex, setSelectedColorIndex] = useState(0);
     const [toastClosed, setToastClosed] = useState(true);
-    const paletteContainerRef = useRef<HTMLDivElement>(null);
-    const [undoHistory, setUndoHistory] = useState<UndoRedoSetPixelState[]>([]);
-    const [redoHistory, setRedoHistory] = useState<UndoRedoSetPixelState[]>([]);
-    
+    const [undoHistory, setUndoHistory] = useState<UndoRedoState[]>([]);
+    const [redoHistory, setRedoHistory] = useState<UndoRedoState[]>([]);
+    const [showToolSelector, setShowToolSelector] = useState(false);
 
     const [palettes, setPalettes] = useState<[PaletteCollection, PaletteCollection, PaletteCollection, PaletteCollection]>([
         ["#B6DBFF", "#6DB6FF", "#006DDB", "#002492"],
@@ -63,68 +65,71 @@ export default function Editor() {
     ]);      
 
     const [nesPalette, setNESPalette] = useState<string[]>(NES_PALETTE);
-          
-    //const [palette, setPalette] = useState<[string, string, string, string]>(palettes[0]);    
 
-    //const tile = chr[selectedTileIndex] ?? new Uint8Array(16);
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          if (
+            paletteContainerRef.current &&
+            !paletteContainerRef.current.contains(event.target as Node)
+          ) {
+            setShowPaletteSelector(false);
+          }
 
-    // const handleDrawPixel = (x: number, y: number) => {
-    //     const newTile = new Uint8Array(chr[selectedTileIndex]); // clone
-    //     pushState(); // 👈 Save state before modifying
-      
-    //     if (tool === 'draw') setPixel(newTile, x, y, selectedColor);
-    //     else if (tool === 'erase') setPixel(newTile, x, y, 0);
-    //     else if (tool === 'fill') floodFill(newTile, x, y, selectedColor);
-      
-    //     const updated = [...chr];
-    //     updated[selectedTileIndex] = newTile;
-    //     setChr(updated);
+          if(
+            toolContainerRef.current &&
+            !toolContainerRef.current.contains(event.target as Node)
+          ) {
+            setShowToolSelector(false);
+          }
+        };
+    
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+      }, []);      
+                
 
-    //     setShowAutosaveToast(true);        
-    // };
+    const floodFill = (tile: Tile, tileIndex: number, x: number, y: number, newColor: number) => {
+        const targetColor = getTilePixel(tile, x, y);
+        if (targetColor === newColor) return;
+        
+        const stack: [number, number][] = [[x, y]];
+        const visited = new Set<string>();
+        
+        const key = (x: number, y: number) => `${x},${y}`;
 
-    // const handleSaveJson = () => {
-    //     try {
-    //         const asm = exportCa65PaletteAsm(palettes[selectedTileIndex]);
-    //         navigator.clipboard.writeText(asm);
-    //         //setShowSavedToast(true); // optional toast feedback
-    //     } catch (err) {
-    //     alert((err as Error).message); // if palette is invalid
-    //     }
-    // }
+        const stateStack:SetPixelState[] = [];
+        
+        while (stack.length > 0) {
+            const [cx, cy] = stack.pop()!;
+            if (cx < 0 || cx > 7 || cy < 0 || cy > 7) continue;
+            if (visited.has(key(cx, cy))) continue;
+        
+            const currentColor = getTilePixel(tile, cx, cy);
+            if (currentColor !== targetColor) continue;
+        
+            var state:SetPixelState =  { x: cx, y: cy, tileIndex: tileIndex, color: currentColor}
+            stateStack.push(state);
+            // //pushHistory(state);
+            // stateStack.push(state);
 
-    // const handleSaveChr = () => {
-    //     const binary = chrToBinary(chr);
-    //     const blob = new Blob([binary], { type: 'application/octet-stream' });
-    //     const url = URL.createObjectURL(blob);
 
-    //     const link = document.createElement('a');
-    //     link.href = url;
-    //     link.download = 'tiles.chr';
-    //     link.click();
 
-    //     URL.revokeObjectURL(url);
-    // }
+            setTilePixel(tile, cx, cy, newColor);
+            visited.add(key(cx, cy));
+        
+            stack.push([cx + 1, cy]);
+            stack.push([cx - 1, cy]);
+            stack.push([cx, cy + 1]);
+            stack.push([cx, cy - 1]);
+        }
 
-    // const handleExportAsm = () => {
-    //     try {
-    //     const asm = exportCa65PaletteAsm(palettes[selectedPalettedIndex]);
-    //     navigator.clipboard.writeText(asm);
-    //     //setShowSavedToast(true); // optional toast feedback
-    //     } catch (err) {
-    //     alert((err as Error).message); // if palette is invalid
-    //     }
-    // }
-
-    // const handleSavePng = () => {
-    //     const canvas = exportCHRAsPNG(chr, palettes[selectedPalettedIndex], 4);
-    //     const link = document.createElement('a');
-    //     link.href = canvas.toDataURL('image/png');
-    //     link.download = 'tiles.png';
-    //     link.click();
-
-    // }
-
+        // put stack in history
+        const floodState:FloodFillState = stateStack;
+        pushHistory(floodState);
+    }
+    
     const loadCHRFile = async (file: File) => {
 
         const buffer = await file.arrayBuffer();
@@ -206,9 +211,6 @@ export default function Editor() {
             await loadCHRFile(file);
         }
 
-        // Reset to tile 0 when loading
-        setSelectedTileIndex(0);
-
     }
 
     async function handleUpload(file?: File) {
@@ -231,42 +233,70 @@ export default function Editor() {
 
     }
 
+    function isSetPixelState(obj: any): obj is SetPixelState {
+        return typeof obj === 'object' && obj !== null && 'tileIndex' in obj;
+    }
+
+    // function isSetPixelState(state: SetPixelState | FloodFillState): state is SetPixelState {
+    //     return state !== undefined;
+    // }
+    
+    function isFloodFillState(state: SetPixelState | FloodFillState): state is FloodFillState {
+        return state !== undefined;
+    }
+
     function redoState() {
         if(redoHistory.length == 0) return;
 
-        const nextState = redoHistory[redoHistory.length - 1];
+        const state = redoHistory[redoHistory.length - 1];
 
-        const prevState:UndoRedoSetPixelState = {...nextState, color: getPixel(chr[nextState.tileIndex], nextState.x, nextState.y)}
+        if(isSetPixelState(state)) {
+            const nextState = state as SetPixelState;
+            const prevState:UndoRedoState = {...nextState, color: getTilePixel(chr[nextState.tileIndex], nextState.x, nextState.y)}
 
-        setRedoHistory(prev => prev.slice(0, -1));
-        setUndoHistory(prev => [...prev, prevState]);
+            setRedoHistory(prev => prev.slice(0, -1));
+            setUndoHistory(prev => [...prev, prevState]);
 
-        const newTile = new Uint8Array(chr[nextState.tileIndex]);
-        setPixel(newTile, nextState.x, nextState.y, nextState.color);
+            const newTile = new Uint8Array(chr[nextState.tileIndex]);
+            setTilePixel(newTile, nextState.x, nextState.y, nextState.color);
 
-        updateCHR(newTile, nextState.tileIndex);
+            updateCHR(newTile, nextState.tileIndex);
+        } else {
+            const nextState = state as FloodFillState;
+            const prevState:FloodFillState = {...nextState}
+
+            setRedoHistory(prev => prev.slice(0, -1));
+            setUndoHistory(prev => [...prev, prevState]);   
+        }
     }
 
     function undoState() {
         if(undoHistory.length == 0) return;
 
-        const prevState = undoHistory[undoHistory.length - 1];
+        console.log(undoHistory);
+        const state = undoHistory[undoHistory.length - 1];
 
-        setUndoHistory(prev => prev.slice(0, -1));
+        if(isSetPixelState(state)) {
+            const prevState = state as SetPixelState;
+            const newState:UndoRedoState = {...prevState, color: getTilePixel(chr[prevState.tileIndex], prevState.x, prevState.y)}
 
-        const newState:UndoRedoSetPixelState = {...prevState, color: getPixel(chr[prevState.tileIndex], prevState.x, prevState.y)}
+            setUndoHistory(prev => prev.slice(0, -1));
+            setRedoHistory(prev => [...prev, newState]);
 
-        console.log('newState: ', newState);
-        setRedoHistory(prev => [...prev, newState]);
+            const newTile = new Uint8Array(chr[prevState.tileIndex]); // clone
+            setTilePixel(newTile, prevState.x, prevState.y, prevState.color);
 
-        const newTile = new Uint8Array(chr[prevState.tileIndex]); // clone
-        setPixel(newTile, prevState.x, prevState.y, prevState.color);
+            updateCHR(newTile, prevState.tileIndex);
+        }
+        else {
+//            console.log('flood fill: ', state);
 
-        updateCHR(newTile, prevState.tileIndex);
+            const prevState = state as FloodFillState;
+            const newState:FloodFillState = {...prevState}
 
-        // const updated = [...chr]
-        // updated[prevState.tileIndex] = newTile;
-        // setChr(updated);
+            setUndoHistory(prev => prev.slice(0, -1));
+            setRedoHistory(prev => [...prev, newState]);
+        }
     }
 
     // TODO: move into component
@@ -276,18 +306,20 @@ export default function Editor() {
         console.log('tileIndex', tileIndex)
         const newTile = new Uint8Array(chr[tileIndex]); // clone
 
-        var state:UndoRedoSetPixelState =  { x: x, y: y, tileIndex: tileIndex, color: getPixel(chr[tileIndex], x, y)}
-        //undoHistory.push(state)
+        var state:UndoRedoState =  { x: x, y: y, tileIndex: tileIndex, color: getTilePixel(chr[tileIndex], x, y)}
+        //pushHistory(state);
 
-        setUndoHistory(prev => [...prev, state]);
-        setRedoHistory(prev => prev.slice(0))
-        setRedoHistory([]);
-
-        setPixel(newTile, x, y, selectedColorIndex);
+        //setTilePixel(newTile, x, y, selectedColorIndex);
       
-        // if (tool === 'draw') setPixel(newTile, x, y, selectedColor);
-        // else if (tool === 'erase') setPixel(newTile, x, y, 0);
-        // else if (tool === 'fill') floodFill(newTile, x, y, selectedColor);
+        if (tool === 'draw')  {
+            pushHistory(state);
+            setTilePixel(newTile, x, y, selectedColorIndex);
+        }
+        else if (tool === 'erase') {
+            pushHistory(state);
+            setTilePixel(newTile, x, y, 0);
+        }
+        else if (tool === 'fill') floodFill(newTile, tileIndex, x, y, selectedColorIndex);
       
         const updated = [...chr];
         updated[tileIndex] = newTile;
@@ -297,6 +329,13 @@ export default function Editor() {
 
         //setShowAutosaveToast(true);        
     }
+
+    function pushHistory(state: UndoRedoState | FloodFillState) {
+        setUndoHistory(prev => [...prev, state]);
+        setRedoHistory(prev => prev.slice(0))
+        setRedoHistory([]);
+    }
+    
 
     function Notify(msg: string) {
         if(!toastClosed) return;
@@ -348,17 +387,24 @@ export default function Editor() {
                 <div className="flex items-start flex-row bg-zinc-300 p-2 gap-2">
 
                         <div className="flex flex-col gap-1">
-                            <div className="w-[416px]">
+                            <div className="w-[418px]">
                                 <SpriteEditor quads={quads} chr={chr} palette={palettes[selectedPalettedIndex]} onDrawPixel={onDrawPixel} />
                             </div>
-                            <div className="flex flex-row items-center gap-2">
+                            <div className="flex flex-row items-start gap-2">
                                 <PaletteColorList palette={palettes[selectedPalettedIndex]}  onClicked={(index) => setSelectedColorIndex(index)} selected={selectedColorIndex} />
-                                <div data-tooltip-id="my-tooltip" data-tooltip-content="Select a new palette" onClick={() => setShowPaletteSelector(true)} className='border border-zinc-900 rounded w-[48px] h-[48px] bg-purple-600 p-0 cursor-pointer hover:bg-purple-900'>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                            onClick={() => setShowPaletteSelector(!showPaletteSelector)} 
+                                            className='border border-zinc-900 rounded w-[128px] h-[42px] bg-blue-400 p-0 cursor-pointer hover:bg-blue-200 active:bg-blue-600'>
 
-                                    <Palette size={48} color="#ffffff" strokeWidth={1} />
+                                        {/* <Palette size={48} color="#ffffff" strokeWidth={1} /> */}
+                                        Select Palette
 
+                                    </button>
                                 </div>
+
                             </div>
+                            <ToolSelector onSelect={(t) => { setTool(t); setShowToolSelector(false)}} selectedTool={tool} />
                             {showPaletteSelector && (
                                     <div ref={paletteContainerRef} className="animation-fade-in">
                                         <ColorDropdown palettes={palettes} onSelectPalette={(index) => { setSelectedPaletteIndex(index); setShowPaletteSelector(false);}} />
@@ -378,7 +424,15 @@ export default function Editor() {
                                 <SpritePreview palette={palettes[selectedPalettedIndex]} chr={chr} quads={quads} />
                             </div>
                             <div>
-                                <button className='mt-2 bg-green-500 border-zinc-900 border rounded p-2 cursor-pointer hover:bg-green-200 active:outline-2 active:outline-offset-2 active:outline-green-900 active:bg-green-500 hover:outline-2 hover:outline-offset-2 hover:outline-green-900'>Save To Nametable</button>
+                                <button className='mt-2 
+                                                    bg-blue-400 
+                                                    border-zinc-900 
+                                                    border rounded 
+                                                    p-2 
+                                                    cursor-pointer 
+                                                    hover:bg-blue-200
+                                                    active:bg-blue-600'>Save To Nametable</button>
+
                             </div>
                         </div>
                         <div
@@ -410,5 +464,6 @@ export default function Editor() {
     );
   };
   
+
 
   

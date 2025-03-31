@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Tile, getPixel } from '@/core/chr';
+import { Tile, getTilePixel } from '@/core/chr';
 
 type ChrTileCanvasProps = {
     tile: Tile;
@@ -38,7 +38,7 @@ export const ChrTileCanvas: React.FC<ChrTileCanvasProps> = ({
 
             for (let y = 0; y < 8; y++) {
                 for (let x = 0; x < 8; x++) {
-                    const colorIndex = getPixel(tile, x, y) & 0b11;
+                    const colorIndex = getTilePixel(tile, x, y) & 0b11;
                     ctx.fillStyle = palette[colorIndex] ?? '#000000';
                     ctx.fillRect(x * scale, y * scale, scale, scale);
                 }
