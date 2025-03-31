@@ -24,6 +24,7 @@ import { ColorDropdown } from '@/components/ColorDropdown';
 import { NES_PALETTE, PaletteCollection } from '@/core/palette';
 import { PaletteColorList } from '@/components/PaletteColorList';
 import { Tooltip } from 'react-tooltip'
+import { useHotkeys } from '@/core/useHotKeys';
 
 // type Tool = 'draw' | 'erase' | 'fill';
 
@@ -89,6 +90,14 @@ export default function Editor() {
         };
       }, []);      
                 
+    
+    useHotkeys('z', 'ctrl', () => {
+        undoState();
+    });
+
+    useHotkeys('y', 'ctrl', () => {
+        redoState();
+    });
 
     const floodFill = (tile: Tile, tileIndex: number, x: number, y: number, newColor: number) => {
         const targetColor = getTilePixel(tile, x, y);
@@ -111,10 +120,6 @@ export default function Editor() {
         
             var state:SetPixelState =  { x: cx, y: cy, tileIndex: tileIndex, color: currentColor}
             stateStack.push(state);
-            // //pushHistory(state);
-            // stateStack.push(state);
-
-
 
             setTilePixel(tile, cx, cy, newColor);
             visited.add(key(cx, cy));
@@ -227,22 +232,20 @@ export default function Editor() {
     }
 
     function updateCHR(tile: Tile, index: number) {
-        const updated = [...chr]
-        updated[index] = tile;
-        setChr(updated);
+        // const updated = [...chr]
+        // updated[index] = tile;
+        // setChr(updated);
+
+        setChr(prev => {
+            const updated = [...prev];
+            updated[index] = new Uint8Array(tile); // copy to be safe
+            return updated;
+        });        
 
     }
 
     function isSetPixelState(obj: any): obj is SetPixelState {
         return typeof obj === 'object' && obj !== null && 'tileIndex' in obj;
-    }
-
-    // function isSetPixelState(state: SetPixelState | FloodFillState): state is SetPixelState {
-    //     return state !== undefined;
-    // }
-    
-    function isFloodFillState(state: SetPixelState | FloodFillState): state is FloodFillState {
-        return state !== undefined;
     }
 
     function redoState() {
@@ -263,7 +266,31 @@ export default function Editor() {
             updateCHR(newTile, nextState.tileIndex);
         } else {
             const nextState = state as FloodFillState;
-            const prevState:FloodFillState = {...nextState}
+            const prevState:FloodFillState = []
+
+            // need to go through each element in newState and set the color appropriately.
+            for(let i = 0; i < nextState.length; i++) {
+                const pixelState:SetPixelState = { color: getTilePixel(chr[nextState[i].tileIndex], nextState[i].x, nextState[i].y), x: nextState[i].x, y: nextState[i].y, tileIndex: nextState[i].tileIndex};
+                prevState.push(pixelState);
+            }
+
+            let tile = new Uint8Array(chr[nextState[0].tileIndex]);
+            let tileIndex = nextState[0].tileIndex;
+            for(let i = 0; i < nextState.length; i++) {
+                const s = nextState[i];
+                
+                if(s.tileIndex != tileIndex) {
+                    updateCHR(tile, tileIndex);        
+                    
+                    tileIndex = s.tileIndex;
+                    tile = new Uint8Array(chr[tileIndex]);
+                }
+
+                setTilePixel(tile, s.x, s.y, s.color);
+
+            }
+
+            updateCHR(tile, tileIndex);
 
             setRedoHistory(prev => prev.slice(0, -1));
             setUndoHistory(prev => [...prev, prevState]);   
@@ -273,7 +300,6 @@ export default function Editor() {
     function undoState() {
         if(undoHistory.length == 0) return;
 
-        console.log(undoHistory);
         const state = undoHistory[undoHistory.length - 1];
 
         if(isSetPixelState(state)) {
@@ -289,10 +315,31 @@ export default function Editor() {
             updateCHR(newTile, prevState.tileIndex);
         }
         else {
-//            console.log('flood fill: ', state);
-
             const prevState = state as FloodFillState;
-            const newState:FloodFillState = {...prevState}
+            const newState:FloodFillState = []
+
+            // need to go through each element in newState and set the color appropriately.
+             for(let i = 0; i < prevState.length; i++) {
+                const pixelState:SetPixelState = { color: getTilePixel(chr[prevState[i].tileIndex], prevState[i].x, prevState[i].y), x: prevState[i].x, y: prevState[i].y, tileIndex: prevState[i].tileIndex };
+                newState.push(pixelState);
+            }
+
+            let tile = new Uint8Array(chr[prevState[0].tileIndex]);
+            let tileIndex = prevState[0].tileIndex;
+            for(let i = 0; i < prevState.length; i++) {
+                const s = prevState[i];
+                
+                if(s.tileIndex != tileIndex) {
+                    updateCHR(tile, tileIndex);        
+                    
+                    tileIndex = s.tileIndex;
+                    tile = new Uint8Array(chr[tileIndex]);
+                }
+
+                setTilePixel(tile, s.x, s.y, s.color);
+            }
+
+            updateCHR(tile, tileIndex);
 
             setUndoHistory(prev => prev.slice(0, -1));
             setRedoHistory(prev => [...prev, newState]);
@@ -302,14 +349,9 @@ export default function Editor() {
     // TODO: move into component
     function onDrawPixel(x: number, y: number, quad: number): void {
         const tileIndex = quads[quad];
-
-        console.log('tileIndex', tileIndex)
         const newTile = new Uint8Array(chr[tileIndex]); // clone
 
         var state:UndoRedoState =  { x: x, y: y, tileIndex: tileIndex, color: getTilePixel(chr[tileIndex], x, y)}
-        //pushHistory(state);
-
-        //setTilePixel(newTile, x, y, selectedColorIndex);
       
         if (tool === 'draw')  {
             pushHistory(state);
@@ -326,8 +368,6 @@ export default function Editor() {
         setChr(updated);
 
         Notify("Auto saved");
-
-        //setShowAutosaveToast(true);        
     }
 
     function pushHistory(state: UndoRedoState | FloodFillState) {
